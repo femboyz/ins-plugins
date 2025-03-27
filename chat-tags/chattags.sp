@@ -49,7 +49,6 @@ public Action Hook_PlayerChat(int client, const char[] command, int argc)
 
     char message[256];
     GetCmdArgString(message, sizeof(message));
-
     if (message[0] == '\"')
     {
         int len = strlen(message);
@@ -61,23 +60,31 @@ public Action Hook_PlayerChat(int client, const char[] command, int argc)
     GetClientName(client, name, sizeof(name));
     GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
 
+    bool hasCustomTag = false;
     if (KvJumpToKey(kv, steamid, false))
     {
         KvGetString(kv, "tag", tag, sizeof(tag));
         KvGetString(kv, "color", colorName, sizeof(colorName));
         KvGoBack(kv);
+        hasCustomTag = true;
     }
 
-    if (!StrEqual(colorName, ""))
+    if (hasCustomTag && !StrEqual(colorName, ""))
     {
         GetColorCode(colorName, colorCode, sizeof(colorCode));
     }
 
+    // If not listed, skip formatting and let game handle default message
+    if (!hasCustomTag)
+        return Plugin_Continue;
+
     char formatted[256];
     if (!StrEqual(tag, "") && !StrEqual(colorCode, ""))
         Format(formatted, sizeof(formatted), "%s%s %s: %s", colorCode, tag, name, message);
+    else if (!StrEqual(tag, ""))
+        Format(formatted, sizeof(formatted), "%s %s: %s", tag, name, message);
     else
-        Format(formatted, sizeof(formatted), "%s: %s", name, message);
+        return Plugin_Continue;
 
     for (int i = 1; i <= MaxClients; i++)
     {
